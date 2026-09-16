@@ -2,10 +2,13 @@ import {MutableRefObject, useCallback, useEffect, useMemo, useRef} from 'react'
 import {useAppDispatch, useAppSelector} from '../hooks/redux'
 import {setFloatKeyPointsSegIdx, setSegmentFold, setTempData} from '../redux/envReducer'
 import classNames from 'classnames'
-import {FaClipboardList, FaComments} from 'react-icons/fa'
-import {SUMMARIZE_THRESHOLD, SUMMARIZE_TYPES} from '../consts/const'
+import { FaClipboardList, FaComments, FaQuestion } from 'react-icons/fa'
+import { SUMMARIZE_THRESHOLD, SUMMARIZE_TYPES } from '../consts/const'
 import useTranslate from '../hooks/useTranslate'
-import {BsDashSquare, BsPlusSquare, CgFileDocument, FaQuestion, GrOverview, RiFileCopy2Line} from 'react-icons/all'
+import { BsDashSquare, BsPlusSquare } from 'react-icons/bs'
+import { CgFileDocument } from 'react-icons/cg'
+import { GrOverview } from 'react-icons/gr'
+import { RiFileCopy2Line } from 'react-icons/ri'
 import toast from 'react-hot-toast'
 import {getLastTime, getSummaryStr, isSummaryEmpty, parseStrTimeToSeconds} from '../utils/bizUtil'
 import {useInViewport} from 'ahooks'
@@ -239,21 +242,9 @@ const SegmentCard = (props: {
             ? <BsPlusSquare className='cursor-pointer' onClick={onFold}/> :
             <BsDashSquare className='cursor-pointer' onClick={onFold}/>}
         </div>}
-      {summarizeEnable && <div className="tabs">
-        <a className="tab tab-lifted tab-xs tab-disabled cursor-default"></a>
-        <a className={classNames('tab tab-lifted tab-xs', curSummaryType === 'brief' && 'tab-active')} onClick={onSelBrief}><CgFileDocument/>总结</a>
-        <a className={classNames('tab tab-lifted tab-xs', curSummaryType === 'overview' && 'tab-active')} onClick={onSelOverview}><GrOverview/>概览</a>
-        <a className={classNames('tab tab-lifted tab-xs', curSummaryType === 'keypoint' && 'tab-active')} onClick={onSelKeypoint}><FaClipboardList/>要点</a>
-        <a className={classNames('tab tab-lifted tab-xs', curSummaryType === 'question' && 'tab-active')} onClick={onSelQuestion}><FaQuestion/>问题</a>
-        <a className={classNames('tab tab-lifted tab-xs', curSummaryType === 'debate' && 'tab-active')} onClick={onSelDebate}><FaComments/>辩论</a>
-        <a className="tab tab-lifted tab-xs tab-disabled cursor-default"></a>
-      </div>}
       <div
         className='absolute right-0 top-0 bottom-0 text-xs desc-lighter select-none flex-center'>{getLastTime(segment.items[segment.items.length - 1].to - segment.items[0].from)}</div>
     </div>
-    {summarizeEnable && <div ref={summarizeRef}>
-      <Summarize segment={segment} segmentIdx={segmentIdx} summary={summary}/>
-    </div>}
     {!segment.fold
       ? <div>
         {!compact && <div className='desc text-xs flex py-0.5'>
@@ -275,14 +266,6 @@ const SegmentCard = (props: {
       : <div className='flex justify-center'><a className='link text-xs'
                                                 onClick={onFold}>{segment.items.length}行已折叠,点击展开</a>
       </div>}
-    {floatKeyPointsSegIdx === segment.startIdx && <div
-      className='absolute bottom-0 left-0 right-0 z-[200] border-t bg-base-100 text-primary-content shadow max-h-[100px] overflow-y-auto scrollbar-hide'
-      onWheel={stopPopFunc}
-    >
-      <div className='bg-primary/50 p-2'>
-        <Summarize segment={segment} segmentIdx={segmentIdx} summary={summary} float/>
-      </div>
-    </div>}
   </div>
 }
 

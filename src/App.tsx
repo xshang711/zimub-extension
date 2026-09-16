@@ -25,6 +25,9 @@ function App() {
   }, [envData])
   const onLoadEnv = useCallback((data?: EnvData) => {
     if (data != null) {
+      data.translateEnable = false
+      data.summarizeEnable = false
+      data.askEnabled = false
       dispatch(setEnvData(data))
     }
     dispatch(setEnvReady())

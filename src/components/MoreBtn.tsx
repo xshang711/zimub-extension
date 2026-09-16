@@ -1,15 +1,13 @@
 import {MouseEvent, useCallback, useContext, useRef, useState} from 'react'
 import {useClickAway} from 'ahooks'
-import {
-  FiMoreVertical,
-  ImDownload3,
-  IoMdSettings,
-  RiFileCopy2Line
-} from 'react-icons/all'
+import { FiMoreVertical } from 'react-icons/fi'
+import { ImDownload3 } from 'react-icons/im'
+import { IoMdSettings } from 'react-icons/io'
+import { RiFileCopy2Line } from 'react-icons/ri'
 import Popover from '../components/Popover'
 import {Placement} from '@popperjs/core/lib/enums'
 import {useAppDispatch, useAppSelector} from '../hooks/redux'
-import {setEnvData, setTempData} from '../redux/envReducer'
+import {setBatchModalVisible, setEnvData, setTempData} from '../redux/envReducer'
 import {EventBusContext} from '../Router'
 import {EVENT_EXPAND} from '../consts/const'
 import {formatSrtTime, formatTime, formatVttTime, downloadText} from '../utils/util'
@@ -24,6 +22,10 @@ interface Props {
 }
 
 const DownloadTypes = [
+  {
+    type: 'md',
+    name: 'Markdown(.md)',
+  },
   {
     type: 'text',
     name: '列表',
@@ -48,10 +50,6 @@ const DownloadTypes = [
     type: 'json',
     name: '原始json',
   },
-  {
-    type: 'summarize',
-    name: '总结',
-  },
 ]
 
 const MoreBtn = (props: Props) => {
@@ -70,6 +68,7 @@ const MoreBtn = (props: Props) => {
   const title = useAppSelector(state => state.env.title)
   const ctime = useAppSelector(state => state.env.ctime) // 时间戳，单位s
   const author = useAppSelector(state => state.env.author)
+  const aid = useAppSelector(state => state.env.aid)
   const curSummaryType = useAppSelector(state => state.env.tempData.curSummaryType)
 
   const {sendInject} = useMessage(!!envData.sidePanel)
@@ -82,7 +81,16 @@ const MoreBtn = (props: Props) => {
     let fileName = title
     let s, suffix
     const time = ctime ? dayjs(ctime * 1000).format('YYYY-MM-DD HH:mm:ss') : '' // 2024-05-01 12:00:00
-    if (!downloadType || downloadType === 'text') {
+    if (!downloadType || downloadType === 'md') {
+      s = `# ${title ?? '无标题'}\n\n`
+      if (author || time || url) {
+        s += `> ${[author ? `UP主: ${author}` : '', time ? `发布时间: ${time}` : '', url ? `视频链接: ${url}` : ''].filter(Boolean).join(' | ')}\n\n`
+      }
+      for (const item of data.body) {
+        s += `- **${formatTime(item.from)}** ${item.content}\n`
+      }
+      suffix = 'md'
+    } else if (downloadType === 'text') {
       s = `${title??'无标题'}\n${url??'无链接'}\n${author??'无作者'} ${time}\n\n`
       for (const item of data.body) {
         s += item.content + '\n'
@@ -238,16 +246,32 @@ const MoreBtn = (props: Props) => {
             </select>
           </a>
         </li>
-        <li className='hover:bg-accent'>
-          <a className='flex items-center' onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            downloadAudioCallback()
-          }}>
-            <ImDownload3 className='w-[20px] h-[20px] text-primary/75 bg-white rounded-sm p-0.5'/>
-            下载音频(m4s)
-          </a>
-        </li>
+        {aid && (
+          <li className='hover:bg-accent'>
+            <a className='flex items-center' onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              downloadAudioCallback()
+            }}>
+              <ImDownload3 className='w-[20px] h-[20px] text-primary/75 bg-white rounded-sm p-0.5'/>
+              下载音频(m4s)
+            </a>
+          </li>
+        )}
+        {aid && (
+          <li className='hover:bg-accent'>
+            <a className='flex items-center' onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setMoreVisible(false)
+              eventBus.emit({ type: EVENT_EXPAND })
+              dispatch(setBatchModalVisible(true))
+            }}>
+              <ImDownload3 className='w-[20px] h-[20px] text-secondary bg-white rounded-sm p-0.5'/>
+              批量下载合集字幕
+            </a>
+          </li>
+        )}
         {/* <li className='hover:bg-accent'>
           <a className='flex items-center' onClick={(e) => {
             e.preventDefault()
@@ -300,17 +324,7 @@ const MoreBtn = (props: Props) => {
             选项
           </a>
         </li>
-        {/* 官网 */}
-        <li className='hover:bg-accent'>
-          <a className='flex items-center' onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            openUrl('https://www.bibijun.cc')
-          }}>
-            <img alt='哔哔君' src='/favicon-128x128.png' className='w-[20px] h-[20px] bg-white rounded-sm p-0.5'/>
-            🏠 哔哔君官网
-          </a>
-        </li>
+
       </ul>
     </Popover>}
   </>

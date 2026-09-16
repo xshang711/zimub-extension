@@ -12,14 +12,11 @@ import {
   setTempData
 } from '../redux/envReducer'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import {
-  AiOutlineAim,
-  AiOutlineCloseCircle,
-  FaRegArrowAltCircleDown,
-  IoWarning,
-  MdExpand,
-  RiTranslate
-} from 'react-icons/all'
+import { AiOutlineAim, AiOutlineCloseCircle } from 'react-icons/ai'
+import { FaRegArrowAltCircleDown } from 'react-icons/fa'
+import { IoWarning } from 'react-icons/io5'
+import { MdExpand } from 'react-icons/md'
+import { RiTranslate } from 'react-icons/ri'
 import classNames from 'classnames'
 import toast from 'react-hot-toast'
 import SegmentCard from './SegmentCard'
@@ -235,14 +232,6 @@ const Body = () => {
       </div>
     </div>
     <div className='absolute top-1 right-6'>
-      {translateEnable && <div className='tooltip tooltip-left cursor-pointer' data-tip='点击切换自动翻译'
-        onClick={toggleAutoTranslateCallback}>
-        <RiTranslate className={autoTranslate ? 'text-accent' : ''} />
-      </div>}
-      {summarizeEnable &&
-        <div className='tooltip tooltip-left cursor-pointer z-[100] ml-2' data-tip='总结全部' onClick={onSummarizeAll}>
-          <FaClipboardList />
-        </div>}
       {noVideo && <div className='tooltip tooltip-left ml-2' data-tip='当前浏览器不支持视频跳转'>
         <IoWarning className='text-warning' />
       </div>}
@@ -250,17 +239,7 @@ const Body = () => {
 
     {/* search */}
     {showSearchInput && <div className='px-2 py-1 flex flex-col relative'>
-      <input type='text' className='input input-xs bg-base-200' placeholder={searchPlaceholder} value={searchText} onChange={onSearchTextChange} onKeyDown={e => {
-        // enter
-        if (e.key === 'Enter') {
-          if (!inputting) {
-            e.preventDefault()
-            e.stopPropagation()
-            onAsk()
-            dispatch(setSearchText(''))
-          }
-        }
-      }} />
+      <input type='text' className='input input-xs bg-base-200' placeholder='搜索字幕内容' value={searchText} onChange={onSearchTextChange} />
       {searchText && <button className='absolute top-1 right-2 btn btn-ghost btn-xs btn-circle text-base-content/75' onClick={onClearSearchText}><AiOutlineCloseCircle /></button>}
     </div>}
 
@@ -283,9 +262,6 @@ const Body = () => {
         height: `${totalHeight - HEADER_HEIGHT - TITLE_HEIGHT - (showSearchInput ? SEARCH_BAR_HEIGHT : 0)}px`
       }}
     >
-      {/* asks */}
-      {asks.map(ask => <Ask key={ask.id} ask={ask} />)}
-
       {/* segments */}
       {segments?.map((segment, segmentIdx) => <SegmentCard key={segment.startIdx} segment={segment}
         segmentIdx={segmentIdx} bodyRef={bodyRef} />)}
@@ -297,8 +273,6 @@ const Body = () => {
         <li>alt+单击字幕复制单条字幕。</li>
         <li>上下方向键来移动当前字幕(可先点击字幕使焦点在字幕列表内)。</li>
       </ul>
-
-      <ApiKeyReminder />
 
       <RateExtension />
     </div>

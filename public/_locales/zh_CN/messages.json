@@ -1,8 +1,8 @@
 {
   "appName": {
-    "message": "哔哔君 - bilibili哔哩哔哩字幕列表"
+    "message": "zimub"
   },
   "appDescription": {
-    "message": "显示B站视频的字幕列表,可点击跳转与下载字幕,并支持翻译和总结字幕!"
+    "message": "B站视频字幕助手,支持点击跳转、分P/合集字幕导出及AI翻译总结!"
   }
 }

@@ -27,7 +27,7 @@ interface EnvData {
   summarizeLanguage?: string
   words?: number
   summarizeFloat?: boolean
-  theme?: 'system' | 'light' | 'dark'
+  theme?: 'system' | 'light' | 'dark' | 'eyecare'
   fontSize?: 'normal' | 'large'
 
   // chapter
@@ -168,3 +168,4 @@ interface DebateMessage {
 interface DebateProps {
   messages: DebateMessage[]
 }
+

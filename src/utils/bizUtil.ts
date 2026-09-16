@@ -146,16 +146,27 @@ export const getModelMaxTokens = (envData: EnvData) => {
 }
 
 export const setTheme = (theme: EnvData['theme']) => {
+  let effectiveTheme = theme ?? 'system'
+  if (!effectiveTheme || effectiveTheme === 'system') {
+    effectiveTheme = isDarkMode() ? 'dark' : 'light'
+  }
+
+  // Update documentElement so the entire page/body adapts
+  if (document.documentElement) {
+    document.documentElement.setAttribute('data-theme', effectiveTheme)
+    if (effectiveTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+      document.documentElement.classList.remove('light')
+    } else {
+      document.documentElement.classList.add('light')
+      document.documentElement.classList.remove('dark')
+    }
+  }
+
   const appRoot = document.getElementById(APP_DOM_ID)
   if (appRoot != null) {
-    // system
-    theme = theme ?? 'system'
-    if (!theme || theme === 'system') {
-      theme = isDarkMode() ? 'dark' : 'light'
-    }
-
-    appRoot.setAttribute('data-theme', theme)
-    if (theme === 'dark') {
+    appRoot.setAttribute('data-theme', effectiveTheme)
+    if (effectiveTheme === 'dark') {
       appRoot.classList.add('dark')
       appRoot.classList.remove('light')
     } else {

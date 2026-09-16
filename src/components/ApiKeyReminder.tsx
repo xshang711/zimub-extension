@@ -1,11 +1,13 @@
 import React from 'react'
 import { useAppSelector } from '../hooks/redux'
 import { openOptionsPage } from '../utils/chromeUtils'
+import { ASK_ENABLED_DEFAULT } from '../consts/const'
 
 const ApiKeyReminder: React.FC = () => {
-  const apiKey = useAppSelector(state => state.env.envData.apiKey)
+  const envData = useAppSelector(state => state.env.envData)
+  const isAiEnabled = envData.translateEnable || envData.summarizeEnable || (envData.askEnabled ?? ASK_ENABLED_DEFAULT)
 
-  if (apiKey) {
+  if (!isAiEnabled || envData.apiKey) {
     return null
   }
 

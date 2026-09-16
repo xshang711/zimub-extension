@@ -8,8 +8,9 @@ import {EventBusContext} from '../Router'
 import useTranslateService from '../hooks/useTranslateService'
 import {setTheme} from '../utils/bizUtil'
 import useSearchService from '../hooks/useSearchService'
-import {setFold} from '../redux/envReducer'
+import {setBatchModalVisible, setFold} from '../redux/envReducer'
 import { useMessage } from '@/hooks/useMessageService'
+import BatchDownloadModal from '../components/BatchDownloadModal'
 
 function App() {
   const dispatch = useAppDispatch()
@@ -17,6 +18,7 @@ function App() {
   const envData = useAppSelector(state => state.env.envData)
   const eventBus = useContext(EventBusContext)
   const totalHeight = useAppSelector(state => state.env.totalHeight)
+  const batchModalVisible = useAppSelector(state => state.env.batchModalVisible)
   const {sendInject} = useMessage(!!envData.sidePanel)
 
   const foldCallback = useCallback(() => {
@@ -33,6 +35,13 @@ function App() {
     }
   })
 
+  // 当打开批量下载时，确保展开面板
+  useEffect(() => {
+    if (batchModalVisible && fold) {
+      foldCallback()
+    }
+  }, [batchModalVisible, fold, foldCallback])
+
   // theme改变时，设置主题
   useEffect(() => {
     setTheme(envData.theme)
@@ -42,11 +51,15 @@ function App() {
   useTranslateService()
   useSearchService()
 
-  return <div className='select-none w-full' style={{
+  return <div className='select-none w-full relative bg-base-100 text-base-content transition-colors duration-200' style={{
     height: fold?undefined:`${totalHeight}px`,
   }}>
     <Header foldCallback={foldCallback}/>
     {!fold && <Body/>}
+    <BatchDownloadModal
+      visible={batchModalVisible}
+      onClose={() => dispatch(setBatchModalVisible(false))}
+    />
   </div>
 }
 

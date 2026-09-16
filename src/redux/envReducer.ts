@@ -34,6 +34,11 @@ interface EnvState {
   title?: string
   ctime?: number | null
   author?: string
+  pages?: any[]
+  ugcSeason?: any
+  bvid?: string
+  aid?: number | null
+  cid?: number | null
   taskIds?: string[]
   transResults: { [key: number]: TransResult }
   lastTransTime?: number
@@ -52,20 +57,25 @@ interface EnvState {
 
   // 当前视频是否计算过操作
   reviewAction: boolean
+
+  batchModalVisible: boolean
 }
 
 const initialState: EnvState = {
   envData: {
     serverUrl: DEFAULT_SERVER_URL_OPENAI,
-    translateEnable: true,
-    summarizeEnable: true,
+    translateEnable: false,
+    summarizeEnable: false,
+    askEnabled: false,
     autoExpand: true,
     theme: 'light',
     searchEnabled: true,
   },
   tempData: {
     curSummaryType: 'overview',
+    downloadType: 'md',
   },
+  batchModalVisible: false,
   totalHeight: TOTAL_HEIGHT_DEF,
   autoScroll: true,
   envReady: false,
@@ -275,6 +285,21 @@ export const slice = createSlice({
     setAuthor: (state, action: PayloadAction<string | undefined>) => {
       state.author = action.payload
     },
+    setPages: (state, action: PayloadAction<any[] | undefined>) => {
+      state.pages = action.payload
+    },
+    setUgcSeason: (state, action: PayloadAction<any | undefined>) => {
+      state.ugcSeason = action.payload
+    },
+    setBvid: (state, action: PayloadAction<string | undefined>) => {
+      state.bvid = action.payload
+    },
+    setAid: (state, action: PayloadAction<number | null | undefined>) => {
+      state.aid = action.payload
+    },
+    setCid: (state, action: PayloadAction<number | null | undefined>) => {
+      state.cid = action.payload
+    },
     setChapters: (state, action: PayloadAction<Chapter[]>) => {
       state.chapters = action.payload
     },
@@ -301,6 +326,9 @@ export const slice = createSlice({
     },
     setInputting: (state, action: PayloadAction<boolean>) => {
       state.inputting = action.payload
+    },
+    setBatchModalVisible: (state, action: PayloadAction<boolean>) => {
+      state.batchModalVisible = action.payload
     },
   },
 })
@@ -351,6 +379,12 @@ export const {
   setCtime,
   setAuthor,
   setChapters,
+  setPages,
+  setUgcSeason,
+  setBvid,
+  setAid,
+  setCid,
+  setBatchModalVisible,
 } = slice.actions
 
 export default slice.reducer

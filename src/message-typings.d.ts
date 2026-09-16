@@ -73,14 +73,30 @@ interface InjectDownloadAudioMessage extends InjectMessage<{}> {
   method: 'DOWNLOAD_AUDIO'
 }
 
-export type AllInjectMessages = InjectToggleDisplayMessage | InjectFoldMessage | InjectMoveMessage | InjectGetSubtitleMessage | InjectGetVideoStatusMessage | InjectGetVideoElementInfoMessage | InjectRefreshVideoInfoMessage | InjectUpdateTransResultMessage | InjectHideTransMessage | InjectPlayMessage | InjectDownloadAudioMessage
+interface InjectGetPartSubtitleMessage extends InjectMessage<{ aid: number, cid: number, bvid?: string }> {
+  method: 'GET_PART_SUBTITLE'
+}
+
+export type AllInjectMessages = InjectToggleDisplayMessage | InjectFoldMessage | InjectMoveMessage | InjectGetSubtitleMessage | InjectGetVideoStatusMessage | InjectGetVideoElementInfoMessage | InjectRefreshVideoInfoMessage | InjectUpdateTransResultMessage | InjectHideTransMessage | InjectPlayMessage | InjectDownloadAudioMessage | InjectGetPartSubtitleMessage
 
 // app
 interface AppSetInfosMessage extends AppMessage<{ infos: any }> {
   method: 'SET_INFOS'
 }
 
-interface AppSetVideoInfoMessage extends AppMessage<{ url: string, title: string, aid: number | null, ctime: number | null, author?: string, pages: any, chapters: any, infos: any }> {
+interface AppSetVideoInfoMessage extends AppMessage<{
+  url: string
+  title: string
+  aid: number | null
+  bvid?: string
+  cid?: number | null
+  ctime: number | null
+  author?: string
+  pages: any
+  chapters: any
+  infos: any
+  ugcSeason?: any
+}> {
   method: 'SET_VIDEO_INFO'
 }
 

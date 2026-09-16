@@ -31,14 +31,9 @@ const debug = (...args: any[]) => {
 
   const runtime: {
     injectMessaging: InjectMessaging<AllExtensionMessages, AllInjectMessages, AllAPPMessages>
-    // lastV?: string | null
-    // lastVideoInfo?: VideoInfo
-
     fold: boolean
-
     videoElement?: HTMLVideoElement
     videoElementHeight: number
-
     showTrans: boolean
     curTrans?: string
   } = {
@@ -49,8 +44,17 @@ const debug = (...args: any[]) => {
   }
 
   const getVideoElement = () => {
-    const videoWrapper = document.getElementById('bilibili-player')
-    return videoWrapper?.querySelector('video') as HTMLVideoElement | undefined
+    let video = document.querySelector('.bpx-player-video-wrap video') as HTMLVideoElement | null
+    if (video) return video
+    video = document.getElementById('bilibili-player')?.querySelector('video') as HTMLVideoElement | null
+    if (video) return video
+    video = document.querySelector('#bpx-player video, .bilibili-player-video video, .player-mobile-display video') as HTMLVideoElement | null
+    if (video) return video
+    const videos = Array.from(document.querySelectorAll('video'))
+    if (videos.length > 0) {
+      return videos.find(v => !v.paused) || videos[0]
+    }
+    return undefined
   }
 
   /**
@@ -64,13 +68,16 @@ const debug = (...args: any[]) => {
     } else {
       runtime.videoElement = newVideoElement
       runtime.videoElementHeight = newVideoElementHeight
-      // update iframe height
       updateIframeHeight()
       return true
     }
   }
 
   const createIframe = () => {
+    if (document.getElementById(IFRAME_ID)) {
+      return document.getElementById(IFRAME_ID) as HTMLIFrameElement
+    }
+
     var danmukuBox = document.getElementById('danmukuBox')
     if (danmukuBox) {
       var vKey = ''
@@ -102,7 +109,7 @@ const debug = (...args: any[]) => {
         show: true
       })
 
-      debug('iframe inserted')
+      debug('Bilibili iframe inserted')
 
       return iframe
     }
@@ -113,8 +120,6 @@ const debug = (...args: any[]) => {
       var danmukuBox = document.getElementById('danmukuBox')
       if (danmukuBox) {
         clearInterval(timerIframe)
-
-        // 延迟插入iframe（插入太快，网络较差时容易出现b站网页刷新，原因暂时未知，可能b站的某种机制？）
         setTimeout(createIframe, 1500)
       }
     }, 1000)
@@ -126,25 +131,28 @@ const debug = (...args: any[]) => {
   let title = ''
   let pages: any[] = []
   let pagesMap: Record<string, any> = {}
+  let ugcSeason: any = undefined
 
   let lastAidOrBvid: string | null = null
+  let lastAid: number | null = null
+  let lastCid: number | null = null
+
   const refreshVideoInfo = async (force: boolean = false) => {
     if (force) {
       lastAidOrBvid = null
+      lastAid = null
+      lastCid = null
     }
     if (!sidePanel) {
       const iframe = document.getElementById(IFRAME_ID) as HTMLIFrameElement | undefined
       if (!iframe) return
     }
 
-    // fix: https://github.com/IndieKKY/bilibili-subtitle/issues/5
-    // 处理稍后再看的url( https://www.bilibili.com/list/watchlater?bvid=xxx&oid=xxx )
     const pathSearchs: Record<string, string> = {}
-    // eslint-disable-next-line no-return-assign
     location.search.slice(1).replace(/([^=&]*)=([^=&]*)/g, (matchs, a, b, c) => pathSearchs[a] = b)
 
     // bvid
-    let aidOrBvid = pathSearchs.bvid // 默认为稍后再看
+    let aidOrBvid = pathSearchs.bvid
     if (!aidOrBvid) {
       let path = location.pathname
       if (path.endsWith('/')) {
@@ -154,83 +162,92 @@ const debug = (...args: any[]) => {
       aidOrBvid = paths[paths.length - 1]
     }
 
-    if (aidOrBvid !== lastAidOrBvid) {
-      // console.debug('refreshVideoInfo')
-
+    if (aidOrBvid && aidOrBvid !== lastAidOrBvid) {
       lastAidOrBvid = aidOrBvid
-      if (aidOrBvid) {
-        // aid,pages
-        let cid: string | undefined
-        /**
-         * [
-    {
-        "type": 2,
-        "from": 0,
-        "to": 152, //单位秒
-        "content": "发现美",
-        "imgUrl": "http://i0.hdslb.com/bfs/vchapter/29168372111_0.jpg",
-        "logoUrl": "",
-        "team_type": "",
-        "team_name": ""
-    }
-]
-         */
-        let chapters: any[] = []
-        let subtitles
-        if (aidOrBvid.toLowerCase().startsWith('av')) { // avxxx
-          aid = parseInt(aidOrBvid.slice(2))
-          pages = await fetch(`https://api.bilibili.com/x/player/pagelist?aid=${aid}`, { credentials: 'include' }).then(async res => await res.json()).then(res => res.data)
-          cid = pages[0].cid
-          ctime = pages[0].ctime
-          author = pages[0].owner?.name
-          title = pages[0].part
-          await fetch(`https://api.bilibili.com/x/player/wbi/v2?aid=${aid}&cid=${cid!}`, { credentials: 'include' }).then(async res => await res.json()).then(res => {
-            chapters = res.data.view_points ?? []
-            subtitles = res.data.subtitle.subtitles
+      let cid: number | undefined
+      let chapters: any[] = []
+      let subtitles: any[] = []
+
+      if (aidOrBvid.toLowerCase().startsWith('av')) { // avxxx
+        aid = parseInt(aidOrBvid.slice(2))
+        try {
+          const res = await fetch(`https://api.bilibili.com/x/player/pagelist?aid=${aid}`, { credentials: 'include' }).then(r => r.json())
+          pages = res.data ?? []
+          pagesMap = {}
+          pages.forEach((page: any) => {
+            pagesMap[page.page + ''] = page
           })
-        } else { // bvxxx
-          await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${aidOrBvid}`, { credentials: 'include' }).then(async res => await res.json()).then(async res => {
-            title = res.data.title
-            aid = res.data.aid
-            cid = res.data.cid
-            ctime = res.data.ctime
-            author = res.data.owner?.name
-            pages = res.data.pages
-          })
-          await fetch(`https://api.bilibili.com/x/player/wbi/v2?aid=${aid!}&cid=${cid!}`, { credentials: 'include' }).then(async res => await res.json()).then(res => {
-            chapters = res.data.view_points ?? []
-            subtitles = res.data.subtitle.subtitles
-          })
+
+          const urlSearchParams = new URLSearchParams(window.location.search)
+          const p = urlSearchParams.get('p') || '1'
+          const currentPage = pagesMap[p] || pages[0]
+          cid = currentPage?.cid
+          ctime = pages[0]?.ctime
+          author = pages[0]?.owner?.name
+          title = currentPage?.part || pages[0]?.part || ''
+
+          if (aid && cid) {
+            const wbiRes = await fetch(`https://api.bilibili.com/x/player/wbi/v2?aid=${aid}&cid=${cid}`, { credentials: 'include' }).then(r => r.json())
+            chapters = wbiRes.data?.view_points ?? []
+            subtitles = (wbiRes.data?.subtitle?.subtitles ?? []).filter((item: any) => item.subtitle_url)
+          }
+        } catch (e) {
+          console.error('[Inject] fetch av video info error:', e)
         }
+      } else { // bvxxx
+        try {
+          const viewRes = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${aidOrBvid}`, { credentials: 'include' }).then(r => r.json())
+          if (viewRes.code === 0 && viewRes.data) {
+            title = viewRes.data.title
+            aid = viewRes.data.aid
+            ctime = viewRes.data.ctime
+            author = viewRes.data.owner?.name
+            pages = viewRes.data.pages ?? []
+            ugcSeason = viewRes.data.ugc_season
 
-        // 筛选chapters里type为2的
-        chapters = chapters.filter(chapter => chapter.type === 2)
+            pagesMap = {}
+            pages.forEach((page: any) => {
+              pagesMap[page.page + ''] = page
+            })
 
-        // pagesMap
-        pagesMap = {}
-        pages.forEach(page => {
-          pagesMap[page.page + ''] = page
-        })
+            const urlSearchParams = new URLSearchParams(window.location.search)
+            const p = urlSearchParams.get('p') || '1'
+            const currentPage = pagesMap[p] || pages[0]
+            cid = currentPage?.cid ?? viewRes.data.cid
 
-        debug('refreshVideoInfo: ', aid, cid, pages, subtitles)
-
-        // send setVideoInfo
-        runtime.injectMessaging.sendApp(!!sidePanel, 'SET_VIDEO_INFO', {
-          url: location.origin + location.pathname,
-          title,
-          aid,
-          ctime,
-          author,
-          pages,
-          chapters,
-          infos: subtitles,
-        })
+            if (aid && cid) {
+              const wbiRes = await fetch(`https://api.bilibili.com/x/player/wbi/v2?aid=${aid}&cid=${cid}`, { credentials: 'include' }).then(r => r.json())
+              chapters = wbiRes.data?.view_points ?? []
+              subtitles = (wbiRes.data?.subtitle?.subtitles ?? []).filter((item: any) => item.subtitle_url)
+            }
+          }
+        } catch (e) {
+          console.error('[Inject] fetch bv video info error:', e)
+        }
       }
+
+      chapters = chapters.filter(chapter => chapter.type === 2)
+      lastAid = aid
+      lastCid = cid ?? null
+
+      debug('refreshVideoInfo: ', aid, cid, pages, subtitles)
+
+      runtime.injectMessaging.sendApp(!!sidePanel, 'SET_VIDEO_INFO', {
+        url: location.origin + location.pathname,
+        title,
+        aid,
+        bvid: aidOrBvid,
+        cid: cid ?? null,
+        ctime,
+        author,
+        pages,
+        chapters,
+        infos: subtitles,
+        ugcSeason,
+      })
     }
   }
 
-  let lastAid: number | null = null
-  let lastCid: number | null = null
   const refreshSubtitles = () => {
     if (!sidePanel) {
       const iframe = document.getElementById(IFRAME_ID) as HTMLIFrameElement | undefined
@@ -238,7 +255,7 @@ const debug = (...args: any[]) => {
     }
 
     const urlSearchParams = new URLSearchParams(window.location.search)
-    const p = urlSearchParams.get('p') || 1
+    const p = urlSearchParams.get('p') || '1'
     const page = pagesMap[p]
     if (!page) return
     const cid: number | null = page.cid
@@ -254,14 +271,12 @@ const debug = (...args: any[]) => {
         })
           .then(async res => await res.json())
           .then(res => {
-            // remove elements with empty subtitle_url
-            res.data.subtitle.subtitles = res.data.subtitle.subtitles.filter((item: any) => item.subtitle_url)
-            if (res.data.subtitle.subtitles.length > 0) {
-              runtime.injectMessaging.sendApp(!!sidePanel, 'SET_INFOS', {
-                infos: res.data.subtitle.subtitles
-              })
-            }
+            const validSubtitles = (res.data?.subtitle?.subtitles ?? []).filter((item: any) => item.subtitle_url)
+            runtime.injectMessaging.sendApp(!!sidePanel, 'SET_INFOS', {
+              infos: validSubtitles
+            })
           })
+          .catch(console.error)
       }
     }
   }
@@ -302,7 +317,9 @@ const debug = (...args: any[]) => {
     },
     GET_SUBTITLE: async (params) => {
       let url = params.info.subtitle_url
-      if (url.startsWith('http://')) {
+      if (url.startsWith('//')) {
+        url = 'https:' + url
+      } else if (url.startsWith('http://')) {
         url = url.replace('http://', 'https://')
       }
       return await fetch(url).then(async res => await res.json())
@@ -315,6 +332,10 @@ const debug = (...args: any[]) => {
           currentTime: video.currentTime
         }
       }
+      return {
+        paused: true,
+        currentTime: 0
+      }
     },
     GET_VIDEO_ELEMENT_INFO: async (params) => {
       refreshVideoElement()
@@ -325,6 +346,35 @@ const debug = (...args: any[]) => {
     },
     REFRESH_VIDEO_INFO: async (params) => {
       refreshVideoInfo(params.force)
+    },
+    GET_PART_SUBTITLE: async (params) => {
+      const { aid, cid } = params
+      if (!aid || !cid) return { subtitles: [], transcript: null }
+      try {
+        const res = await fetch(`https://api.bilibili.com/x/player/wbi/v2?aid=${aid}&cid=${cid}`, {
+          credentials: 'include',
+        }).then(r => r.json())
+        const subtitles = (res.data?.subtitle?.subtitles ?? []).filter((item: any) => item.subtitle_url)
+        if (!subtitles || subtitles.length === 0) {
+          return { subtitles: [], transcript: null }
+        }
+        const chosen = subtitles[0]
+        let url = chosen.subtitle_url
+        if (url.startsWith('//')) {
+          url = 'https:' + url
+        } else if (url.startsWith('http://')) {
+          url = url.replace('http://', 'https://')
+        }
+        const transcript = await fetch(url).then(r => r.json())
+        return {
+          subtitles,
+          chosenSubtitle: chosen,
+          transcript,
+        }
+      } catch (err: any) {
+        console.error('[Inject] GET_PART_SUBTITLE error:', err)
+        return { subtitles: [], transcript: null, error: err?.message }
+      }
     },
     UPDATE_TRANS_RESULT: async (params) => {
       runtime.showTrans = true
@@ -390,6 +440,27 @@ const debug = (...args: any[]) => {
 
   // 初始化injectMessage
   runtime.injectMessaging.init(methods)
+
+  const checkVideoChange = () => {
+    refreshVideoInfo().catch(console.error)
+    refreshSubtitles()
+  }
+
+  window.addEventListener('popstate', checkVideoChange)
+
+  const origPushState = history.pushState
+  history.pushState = function (...args) {
+    const ret = origPushState.apply(this, args)
+    setTimeout(checkVideoChange, 150)
+    return ret
+  }
+
+  const origReplaceState = history.replaceState
+  history.replaceState = function (...args) {
+    const ret = origReplaceState.apply(this, args)
+    setTimeout(checkVideoChange, 150)
+    return ret
+  }
 
   setInterval(() => {
     if (!sidePanel) {

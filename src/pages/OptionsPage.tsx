@@ -21,7 +21,7 @@ import {
   TRANSLATE_FETCH_STEP,
   WORDS_RATE,
 } from '../consts/const'
-import {IoWarning} from 'react-icons/all'
+import { IoWarning } from 'react-icons/io5'
 import classNames from 'classnames'
 import toast from 'react-hot-toast'
 import {useBoolean, useEventTarget} from 'ahooks'
@@ -186,6 +186,10 @@ const OptionsPage = () => {
     setThemeValue('dark')
   }, [])
 
+  const onSelTheme4 = useCallback(() => {
+    setThemeValue('eyecare')
+  }, [])
+
   const onSelFontSize1 = useCallback(() => {
     setFontSizeValue('normal')
   }, [])
@@ -218,6 +222,7 @@ const OptionsPage = () => {
             <button onClick={onSelTheme1} className={classNames('btn btn-sm no-animation', (!themeValue || themeValue === 'system')?'btn-active':'')}>系统</button>
             <button onClick={onSelTheme2} className={classNames('btn btn-sm no-animation', themeValue === 'light'?'btn-active':'')}>浅色</button>
             <button onClick={onSelTheme3} className={classNames('btn btn-sm no-animation', themeValue === 'dark'?'btn-active':'')}>深色</button>
+            <button onClick={onSelTheme4} className={classNames('btn btn-sm no-animation', themeValue === 'eyecare'?'btn-active':'')}>护眼</button>
           </div>
         </FormItem>
         <FormItem title='字体大小'>
@@ -228,7 +233,7 @@ const OptionsPage = () => {
         </FormItem>
       </OptionCard>
 
-      <OptionCard title="AI 配置">
+      <OptionCard title="AI 配置 (可选)" defaultExpanded={false}>
         {<FormItem title='ApiKey' htmlFor='apiKey'>
           <input id='apiKey' type='text' className='input input-sm input-bordered w-full' placeholder='sk-xxx'
                  value={apiKeyValue} onChange={onChangeApiKeyValue}/>
@@ -252,15 +257,6 @@ const OptionsPage = () => {
             <div>服务器地址：<a className='link link-primary'
                                onClick={() => setServerUrlValue(DEFAULT_SERVER_URL_GEMINI)}
                                rel='noreferrer'>点击设置</a></div>
-            <div className='flex justify-center font-semibold'>【第三方国内代理】</div>
-            <div>代理网址：<a className='link link-primary' href='https://api.kksj.org/register?aff=ucVc'
-                             target='_blank'
-                             rel="noreferrer">点击访问</a></div>
-            <div>服务器地址：<a className='link link-primary'
-                               onClick={() => setServerUrlValue('https://api.kksj.org')}
-                               rel='noreferrer'>点击设置</a></div>
-            <div className='text-amber-600 flex justify-center items-center'><FaGripfire/>目前0.9人民币可充值1美元(约官方价格1/8)<FaGripfire/></div>
-            <div className='text-amber-600 flex justify-center items-center'><FaGripfire/>国内可访问，无需🪜<FaGripfire/></div>
           </div>
         </div>}
         {<FormItem title='模型选择' htmlFor='modelSel' tip='注意，不同模型有不同价格与token限制'>
@@ -289,7 +285,7 @@ const OptionsPage = () => {
         {!apiKeySetted && <div className='tooltip tooltip-right ml-1' data-tip='未设置ApiKey无法使用'>
           <IoWarning className='text-sm text-warning'/>
         </div>}
-      </div>}>
+      </div>} defaultExpanded={false}>
         <FormItem title='启用翻译' htmlFor='translateEnable'>
           <input id='translateEnable' type='checkbox' className='toggle toggle-primary' checked={translateEnableValue}
                  onChange={setTranslateEnableValue}/>
@@ -325,7 +321,7 @@ const OptionsPage = () => {
         {!apiKeySetted && <div className='tooltip tooltip-right ml-1' data-tip='未设置ApiKey无法使用'>
           <IoWarning className='text-sm text-warning'/>
         </div>}
-      </div>}>
+      </div>} defaultExpanded={false}>
         <FormItem title='启用总结' htmlFor='summarizeEnable'>
           <input id='summarizeEnable' type='checkbox' className='toggle toggle-primary' checked={summarizeEnableValue}
                  onChange={setSummarizeEnableValue}/>
@@ -367,14 +363,14 @@ const OptionsPage = () => {
       </OptionCard>
       <OptionCard title={<div className='flex items-center'>
         提问配置
-      </div>}>
+      </div>} defaultExpanded={false}>
         <FormItem title='启用提问' htmlFor='askEnabled' tip='是否启用字幕提问功能'>
           <input id='askEnabled' type='checkbox' className='toggle toggle-primary' checked={askEnabledValue}
                  onChange={setAskEnabledValue}/>
         </FormItem>
       </OptionCard>
 
-      <OptionCard title='提示词配置'>
+      <OptionCard title='提示词配置' defaultExpanded={false}>
         <div className='flex justify-center'>
           <a className='text-sm link link-primary' onClick={togglePromptsFold}>点击{promptsFold ? '展开' : '折叠'}</a>
         </div>

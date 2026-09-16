@@ -25,7 +25,7 @@ class Layer1Protocol<L1Req = any, L1Res = any> {
   private readonly autoDispose: boolean
   private port: chrome.runtime.Port
   private readonly timeout: number
-  private requests: Map<string, { resolve: (value: L1Res) => void, reject: (reason?: any) => void, timer: number }>
+  private requests: Map<string, { resolve: (value: L1Res) => void, reject: (reason?: any) => void, timer: any }>
   private readonly handler: Handler<L1Req, L1Res>
   public disconnected: boolean = false
 

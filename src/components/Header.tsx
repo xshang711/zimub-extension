@@ -1,11 +1,13 @@
-import {IoIosArrowUp} from 'react-icons/all'
+import { IoIosArrowUp } from 'react-icons/io'
+import { RiSunLine, RiMoonLine, RiLeafLine } from 'react-icons/ri'
 import {useCallback} from 'react'
 import {useAppDispatch, useAppSelector} from '../hooks/redux'
 import {find, remove} from 'lodash-es'
-import {setCurFetched, setCurInfo, setData, setInfos, setUploadedTranscript} from '../redux/envReducer'
+import {setCurFetched, setCurInfo, setData, setEnvData, setInfos, setUploadedTranscript} from '../redux/envReducer'
 import MoreBtn from './MoreBtn'
 import classNames from 'classnames'
 import {parseTranscript} from '../utils/bizUtil'
+import {isDarkMode} from '../utils/env_util'
 
 const Header = (props: {
   foldCallback: () => void
@@ -77,17 +79,34 @@ const Header = (props: {
     upload()
   }, [upload])
 
-  return <div className='rounded-[6px] bg-[#f1f2f3] dark:bg-base-100 h-[44px] flex justify-between items-center cursor-pointer' onClick={() => {
-    if (!envData.sidePanel) {
-      foldCallback()
+  const currentTheme = envData.theme ?? 'system'
+  const effectiveTheme = (currentTheme === 'system' || !currentTheme)
+    ? (isDarkMode() ? 'dark' : 'light')
+    : currentTheme
+
+  const cycleTheme = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    let nextTheme: 'light' | 'dark' | 'eyecare' = 'dark'
+    if (effectiveTheme === 'light') {
+      nextTheme = 'dark'
+    } else if (effectiveTheme === 'dark') {
+      nextTheme = 'eyecare'
+    } else {
+      nextTheme = 'light'
     }
-  }}>
+    dispatch(setEnvData({
+      ...envData,
+      theme: nextTheme,
+    }))
+  }, [dispatch, effectiveTheme, envData])
+
+  return <div className='rounded-[6px] bg-base-200 border border-base-300/40 h-[44px] flex justify-between items-center select-none'>
     <div className='shrink-0 flex items-center'>
       {/* <img src="bibijun.png" alt="Logo" className="w-auto h-6 ml-2 mr-1" /> */}
-      <span className='shrink-0 text-[15px] font-medium pl-[16px] pr-[14px]'>字幕列表</span>
+      <span className='shrink-0 text-[15px] font-medium pl-[16px] pr-[14px] select-none'>字幕列表</span>
       <MoreBtn placement={'right-start'}/>
     </div>
-    <div className='flex gap-0.5 items-center mr-[16px]'>
+    <div className='flex gap-1 items-center mr-[14px]'>
       {(infos == null) || infos.length <= 0
         ?<div className='text-xs desc'>
           <button className='btn btn-xs btn-link' onClick={onUpload}>上传(vtt/srt)</button>
@@ -97,7 +116,34 @@ const Header = (props: {
           {infos?.map((item: any) => <option key={item.id} value={item.subtitle_url}>{item.lan_doc}</option>)}
           <option key='upload' value='upload'>上传(vtt/srt)</option>
         </select>}
-      {!envData.sidePanel && <IoIosArrowUp className={classNames('shrink-0 desc transform ease-in duration-300', fold?'rotate-180':'')}/>}
+      {/* 快捷主题切换：浅色 ➔ 暗夜 ➔ 护眼 */}
+      <div
+        className='cursor-pointer p-1 rounded hover:bg-base-300/60 flex items-center justify-center transition-colors'
+        onClick={cycleTheme}
+        title={
+          effectiveTheme === 'light'
+            ? '当前：浅色白天（点击切换为暗夜模式）'
+            : effectiveTheme === 'dark'
+            ? '当前：深色暗夜（点击切换为护眼模式）'
+            : '当前：护眼暖光（点击切换为浅色模式）'
+        }
+      >
+        {effectiveTheme === 'light' && <RiSunLine className='shrink-0 text-[16px] text-amber-500' />}
+        {effectiveTheme === 'dark' && <RiMoonLine className='shrink-0 text-[16px] text-sky-400' />}
+        {effectiveTheme === 'eyecare' && <RiLeafLine className='shrink-0 text-[16px] text-emerald-600' />}
+      </div>
+      {!envData.sidePanel && (
+        <div
+          className='cursor-pointer p-1 rounded hover:bg-base-300/60 flex items-center justify-center transition-colors'
+          onClick={(e) => {
+            e.stopPropagation()
+            foldCallback()
+          }}
+          title={fold ? '展开字幕' : '收起字幕'}
+        >
+          <IoIosArrowUp className={classNames('shrink-0 desc transform ease-in duration-300', fold ? 'rotate-180' : '')} />
+        </div>
+      )}
     </div>
   </div>
 }

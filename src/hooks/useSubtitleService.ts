@@ -62,18 +62,13 @@ const useSubtitleService = () => {
     }
   }, [data, eventBus, infos])
 
-  // 当前未展示 & (未折叠 | 自动展开) & 有列表 => 展示第一个
+  // 当前未展示 & 有列表 => 展示第一个
   useEffect(() => {
-    let autoExpand = envData.autoExpand
-    // 如果显示在侧边栏，则自动展开
-    if (envData.sidePanel) {
-      autoExpand = true
-    }
-    if (!curInfo && (!fold || (envReady && autoExpand)) && (infos != null) && infos.length > 0) {
+    if (!curInfo && (infos != null) && infos.length > 0) {
       dispatch(setCurInfo(infos[0]))
       dispatch(setCurFetched(false))
     }
-  }, [curInfo, dispatch, envData.autoExpand, envReady, fold, infos, envData.sidePanel])
+  }, [curInfo, dispatch, infos])
   // 获取
   useEffect(() => {
     if (curInfo && !curFetched) {
@@ -113,10 +108,10 @@ const useSubtitleService = () => {
   // 更新当前位置
   useEffect(() => {
     let newCurIdx
-    if (((data?.body) != null) && currentTime) {
+    if (((data?.body) != null) && currentTime != null) {
       for (let i=0; i<data.body.length; i++) {
         const item = data.body[i]
-        if (item.from && currentTime < item.from) {
+        if (item.from != null && currentTime < item.from) {
           break
         } else {
           newCurIdx = i
@@ -151,7 +146,8 @@ const useSubtitleService = () => {
     let segments: Segment[] | undefined
     const items = data?.body
     if (items != null) {
-      if (envData.summarizeEnable) { // 分段
+      // 如果启用章节模式且有章节信息，按章节分割
+      if ((envData.chapterMode ?? true) && chapters && chapters.length > 0) {
         let size = envData.words
         if (!size) { // 默认
           size = getModelMaxTokens(envData)*WORDS_RATE
@@ -160,80 +156,84 @@ const useSubtitleService = () => {
 
         segments = []
 
-        // 如果启用章节模式且有章节信息，按章节分割
-        if ((envData.chapterMode ?? true) && chapters && chapters.length > 0) {
-          for (let chapterIdx = 0; chapterIdx < chapters.length; chapterIdx++) {
-            const chapter = chapters[chapterIdx]
-            const nextChapter = chapters[chapterIdx + 1]
+        for (let chapterIdx = 0; chapterIdx < chapters.length; chapterIdx++) {
+          const chapter = chapters[chapterIdx]
+          const nextChapter = chapters[chapterIdx + 1]
 
-            // 找到属于当前章节的字幕项
-            const chapterItems = items.filter(item => {
-              const itemTime = item.from
-              return itemTime >= chapter.from && (nextChapter ? itemTime < nextChapter.from : true)
+          // 找到属于当前章节的字幕项
+          const chapterItems = items.filter(item => {
+            const itemTime = item.from
+            return itemTime >= chapter.from && (nextChapter ? itemTime < nextChapter.from : true)
+          })
+
+          if (chapterItems.length === 0) continue
+
+          // 如果章节内容过长且启用了总结，需要进一步分割
+          const chapterText = getWholeText(chapterItems.map(item => item.content))
+          if (!envData.summarizeEnable || chapterText.length <= size) {
+            // 章节内容不长或未启用总结，作为一个segment
+            segments.push({
+              items: chapterItems,
+              startIdx: chapterItems[0].idx,
+              endIdx: chapterItems[chapterItems.length - 1].idx,
+              text: chapterText,
+              chapterTitle: chapter.content,
+              summaries: {},
             })
-
-            if (chapterItems.length === 0) continue
-
-            // 如果章节内容过长，需要进一步分割
-            const chapterText = getWholeText(chapterItems.map(item => item.content))
-            if (chapterText.length <= size) {
-              // 章节内容不长，作为一个segment
-              segments.push({
-                items: chapterItems,
-                startIdx: chapterItems[0].idx,
-                endIdx: chapterItems[chapterItems.length - 1].idx,
-                text: chapterText,
-                chapterTitle: chapter.content,
-                summaries: {},
-              })
-            } else {
-              // 章节内容过长，需要分割成多个segment
-              let transcriptItems: TranscriptItem[] = []
-              let totalLength = 0
-              for (let i = 0; i < chapterItems.length; i++) {
-                const item = chapterItems[i]
-                transcriptItems.push(item)
-                totalLength += item.content.length
-                if (totalLength >= size || i === chapterItems.length - 1) {
-                  segments.push({
-                    items: transcriptItems,
-                    startIdx: transcriptItems[0].idx,
-                    endIdx: transcriptItems[transcriptItems.length - 1].idx,
-                    text: getWholeText(transcriptItems.map(item => item.content)),
-                    chapterTitle: chapter.content,
-                    summaries: {},
-                  })
-                  // reset
-                  transcriptItems = []
-                  totalLength = 0
-                }
+          } else {
+            // 章节内容过长，需要分割成多个segment
+            let transcriptItems: TranscriptItem[] = []
+            let totalLength = 0
+            for (let i = 0; i < chapterItems.length; i++) {
+              const item = chapterItems[i]
+              transcriptItems.push(item)
+              totalLength += item.content.length
+              if (totalLength >= size || i === chapterItems.length - 1) {
+                segments.push({
+                  items: transcriptItems,
+                  startIdx: transcriptItems[0].idx,
+                  endIdx: transcriptItems[transcriptItems.length - 1].idx,
+                  text: getWholeText(transcriptItems.map(item => item.content)),
+                  chapterTitle: chapter.content,
+                  summaries: {},
+                })
+                // reset
+                transcriptItems = []
+                totalLength = 0
               }
             }
           }
-        } else {
-          // 没有章节信息，按原来的逻辑分割
-          let transcriptItems: TranscriptItem[] = []
-          let totalLength = 0
-          for (let i = 0; i < items.length; i++) {
-            const item = items[i]
-            transcriptItems.push(item)
-            totalLength += item.content.length
-            if (totalLength >= size || i === items.length-1) { // new segment or last
-              // add
-              segments.push({
-                items: transcriptItems,
-                startIdx: transcriptItems[0].idx,
-                endIdx: transcriptItems[transcriptItems.length - 1].idx,
-                text: getWholeText(transcriptItems.map(item => item.content)),
-                summaries: {},
-              })
-              // reset
-              transcriptItems = []
-              totalLength = 0
-            }
+        }
+      } else if (envData.summarizeEnable) {
+        // 没有章节信息但启用了总结，按原来的逻辑按 token 分割
+        let size = envData.words
+        if (!size) { // 默认
+          size = getModelMaxTokens(envData)*WORDS_RATE
+        }
+        size = Math.max(size, WORDS_MIN)
+
+        segments = []
+        let transcriptItems: TranscriptItem[] = []
+        let totalLength = 0
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          transcriptItems.push(item)
+          totalLength += item.content.length
+          if (totalLength >= size || i === items.length-1) { // new segment or last
+            // add
+            segments.push({
+              items: transcriptItems,
+              startIdx: transcriptItems[0].idx,
+              endIdx: transcriptItems[transcriptItems.length - 1].idx,
+              text: getWholeText(transcriptItems.map(item => item.content)),
+              summaries: {},
+            })
+            // reset
+            transcriptItems = []
+            totalLength = 0
           }
         }
-      } else { // 都放一个分段
+      } else { // 既无章节也没有开启总结，整合成一个单一分段
         segments = [{
           items,
           startIdx: 0,
@@ -250,10 +250,10 @@ const useSubtitleService = () => {
   useInterval(() => {
     sendInject(null, 'GET_VIDEO_STATUS', {}).then(status => {
       // 只有当时间发生显著变化时才更新状态（差异大于0.1秒），避免不必要的重新渲染
-      if (currentTime == null || Math.abs(status.currentTime - currentTime) > 0.1) {
+      if (status && status.currentTime != null && (currentTime == null || Math.abs(status.currentTime - currentTime) > 0.1)) {
         dispatch(setCurrentTime(status.currentTime))
       }
-    })
+    }).catch(console.error)
   }, 500)
 
   // show translated text in the video
