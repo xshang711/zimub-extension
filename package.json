@@ -1,16 +1,17 @@
 {
   "private": true,
   "name": "zimub",
-  "version": "1.14.1",
+  "version": "1.0.0",
   "type": "module",
-  "description": "哔哩哔哩字幕列表",
+  "description": "哔哩哔哩字幕提取与学习增强助手",
   "main": "index.js",
+  "repository": "https://github.com/xshang711/zimub-extension",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && node fix.cjs",
     "fix": "eslint --fix --quiet ."
   },
-  "author": "IndieKKY",
+  "author": "xshang711",
   "license": "MIT",
   "dependencies": {
     "@crxjs/vite-plugin": "^1.0.14",
