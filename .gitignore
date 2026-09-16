@@ -26,4 +26,5 @@ dist-ssr
 
 stats.html
 dist.zip
+*.zip
 360/
